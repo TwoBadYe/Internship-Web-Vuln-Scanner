@@ -27,16 +27,44 @@ async def check_security_headers(target: str) -> List[str]:
     return findings
 
 async def check_directory_traversal(target: str) -> List[str]:
+    """
+    Attempts multiple directory traversal payloads on common parameters,
+    checking for presence of /etc/passwd (Linux) or hosts file (Windows).
+    """
     findings: List[str] = []
-    payload = "../../etc/passwd"
-    url = target.rstrip('/') + f"/{payload}"
+    base = target.rstrip('/')
+    params = ["file", "path", "page", "resource", "dir"]
+    # Plain and URL-encoded payloads
+    raw = "../../etc/passwd"
+    raw_win = "..\\..\\Windows\\system32\\drivers\\etc\\hosts"
+    payloads = [
+        raw,
+        raw_win,
+        raw.replace("../", "..%2F"),
+        raw.replace("..", "%2e%2e"),
+        raw_win.replace("\\", "%5C")
+    ]
+
     async with httpx.AsyncClient(timeout=10.0, verify=False) as client:
-        try:
-            response = await client.get(url)
-            if response.status_code == 200 and 'root:' in response.text:
-                findings.append("Possible directory traversal: fetched /etc/passwd contents")
-        except Exception as e:
-            findings.append(f"Error testing directory traversal: {e}")
+        for param in params:
+            for payload in payloads:
+                url = f"{base}/?{param}={payload}"
+                try:
+                    resp = await client.get(url)
+                    text = resp.text.lower()
+                    # Check for Linux passwd or Windows hosts signature
+                    if resp.status_code == 200:
+                        if "root:" in text:
+                            findings.append(
+                                f"Possible Linux traversal on `{param}` with `{payload}` (found /etc/passwd)"
+                            )
+                        elif "127.0.0.1" in text and "localhost" in text:
+                            findings.append(
+                                f"Possible Windows traversal on `{param}` with `{payload}` (found hosts file)"
+                            )
+                except Exception as e:
+                    findings.append(f"Error on `{param}` with `{payload}`: {e}")
+
     return findings
 
 async def check_open_ports(target: str, ports: List[int] = None) -> List[str]:
