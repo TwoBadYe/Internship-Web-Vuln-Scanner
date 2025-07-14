@@ -61,18 +61,29 @@ async def check_open_ports(target: str, ports: List[int] = None) -> List[str]:
 
 async def check_sql_injection(target: str) -> List[str]:
     findings = []
-    payload = "' OR '1'='1"
-    url = target.rstrip('/') + f"/?id={payload}"
+    payloads = [
+        "' OR '1'='1",
+        "';",
+        "'--",
+        "' OR 1=1 --",
+        "' AND '1'='2",
+        '" OR "1"="1'
+    ]
+    parameters = ["id", "user", "q", "search", "page"]
+
     async with httpx.AsyncClient(timeout=10.0, verify=False) as client:
-        try:
-            response = await client.get(url)
-            if "sql" in response.text.lower() or "syntax" in response.text.lower():
-                findings.append("Possible SQL injection vulnerability detected")
-        except Exception as e:
-            findings.append(f"Error testing SQL injection: {e}")
+        for param in parameters:
+            for payload in payloads:
+                try:
+                    url = target.rstrip("/") + f"/?{param}={payload}"
+                    response = await client.get(url)
+                    if any(err in response.text.lower() for err in ["sql", "syntax", "mysql", "psql", "query"]):
+                        findings.append(f"Possible SQL injection on parameter `{param}` with payload `{payload}`")
+                except Exception as e:
+                    findings.append(f"Error testing SQL injection on `{param}` with payload `{payload}`: {e}")
     return findings
 
-async def check_xss(target: str) -> List[str]:
+async def check_xss(target: str) -> List[str]: #basic payload TODO : upgrade to more advanced
     findings = []
     payload = "<script>alert('xss')</script>"
     url = target.rstrip('/') + f"/?q={payload}"
