@@ -91,11 +91,8 @@ function App() {
                 <Checkbox value="Directory Traversal">Directory Traversal</Checkbox>
                 <Checkbox value="HTTP Headers">HTTP Security Headers</Checkbox>
                 <Checkbox value="TLS/SSL">TLS/SSL Configuration</Checkbox>
-                <Checkbox value="Dir/File Enum">Directory & File Enumeration</Checkbox>
-                <Checkbox value="Cookie Flags">Cookie Security Flags</Checkbox>
-                <Checkbox value="CORS">CORS Misconfiguration</Checkbox>
+                <Checkbox value="Robots.txt">Robots.txt</Checkbox>
                 <Checkbox value="Clickjacking">Clickjacking Protection</Checkbox>
-                <Checkbox value="Subdomain Enum">Subdomain Enumeration</Checkbox>
               </Stack>
             </CheckboxGroup>
           </FormControl>
