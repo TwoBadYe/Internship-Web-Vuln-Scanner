@@ -210,10 +210,17 @@ async def check_sql_injection(target: str) -> List[str]:
     parameters = ["id", "user", "q", "search"]
 
     async with httpx.AsyncClient(timeout=10.0, verify=False) as client:
-        # First, grab a baseline response body & time
-        baseline = await client.get(target)
-        base_text = baseline.text.lower()
+        try:
+            baseline = await client.get(target)
+        except httpx.ReadTimeout:
+            findings.append("Baseline request timed out")
+            return findings
+        except Exception as e:
+            findings.append(f"Baseline request error: {e}")
+            return findings
+
         base_len = len(baseline.text)
+
         for param in parameters:
             for payload in payloads:
                 url = f"{target.rstrip('/')}/?{param}={payload}"
@@ -222,23 +229,21 @@ async def check_sql_injection(target: str) -> List[str]:
                     resp = await client.get(url)
                     delta = time.perf_counter() - start
                     body = resp.text.lower()
-                    
-                    # 1) Error-based detection
+
                     if any(err in body for err in ["sql", "syntax", "mysql", "psql"]):
                         findings.append(f"Error-based SQLi on `{param}` with `{payload}`")
-                    
-                    # 2) Time-based detection (e.g. >2s delay)
+
                     elif "sleep" in payload and delta > 2:
                         findings.append(f"Time-based SQLi on `{param}` with `{payload}` (delay {delta:.1f}s)")
-                    
-                    # 3) Response-length anomaly
+
                     elif abs(len(resp.text) - base_len) / base_len > 0.2:
                         findings.append(f"Anomalous response size on `{param}` with `{payload}`")
-                    
+                except httpx.ReadTimeout:
+                    findings.append(f"Request timed out on `{param}` with `{payload}`")
                 except Exception as e:
                     findings.append(f"Error testing SQLi on `{param}` with `{payload}`: {e}")
     return findings
-   
+
 async def check_xss(target: str) -> List[str]: #basic payload TODO : upgrade to more advanced
     findings: List[str] = []
 
@@ -306,6 +311,7 @@ async def run_basic_scan(scan_id: str, target: str, options: List[str]):
     raw_findings = [item for sublist in raw_lists for item in sublist]
 
     # 3) Group all raw strings into Finding objects
+    #this is an abomination and needs to be burnt in holy fire but it works for now
     def group_findings(raw: List[str]) -> List[Finding]:
         groups = defaultdict(lambda: {"vulnerability": None, "parameter": None, "payloads": []})
 
