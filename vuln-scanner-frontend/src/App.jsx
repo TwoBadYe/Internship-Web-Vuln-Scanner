@@ -47,7 +47,6 @@ function App() {
     'HTTP Security Headers',
     'TLS/SSL Configuration',
     'Robots.txt',
-    'Clickjacking Protection',
   ];
 
   const vulnTypes = results ? Array.from(new Set(results.map(f => f.vulnerability))) : [];
