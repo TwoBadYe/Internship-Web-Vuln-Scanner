@@ -2,7 +2,6 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from .router import router
 
 app = FastAPI(
@@ -11,12 +10,9 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Allow your React app (or any other client) to call these endpoints
-from fastapi.middleware.cors import CORSMiddleware
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # Add your frontend URLs here
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

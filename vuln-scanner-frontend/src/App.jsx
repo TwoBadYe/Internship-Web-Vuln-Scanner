@@ -1,3 +1,4 @@
+// src/App.jsx (or wherever your component lives)
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@chakra-ui/react';
 import axios from 'axios';
@@ -26,6 +27,8 @@ import { FaBug, FaSearch, FaMoon, FaSun, FaBolt } from 'react-icons/fa';
 const MotionBox = motion(Box);
 
 function App() {
+  const API_BASE = 'http://localhost:8000/scan'; // <<-- centralize base URL here
+
   const [target, setTarget] = useState('');
   const [scanOptions, setScanOptions] = useState([]);
   const [scanId, setScanId] = useState(null);
@@ -64,11 +67,12 @@ function App() {
     setResults(null);
 
     try {
-      const resp = await axios.post('http://localhost:8000/scan/scan/basic', { target, options: scanOptions });
+      // NOTE: endpoint -> `${API_BASE}/basic`
+      const resp = await axios.post(`${API_BASE}/basic`, { target, options: scanOptions });
       setScanId(resp.data.scan_id);
       setStatus(resp.data.status);
     } catch (error) {
-      toast({ title: 'Error', description: error.message, status: 'error', duration: 3000, isClosable: true });
+      toast({ title: 'Error', description: error?.response?.data || error.message, status: 'error', duration: 3000, isClosable: true });
       setLoading(false);
     }
   };
@@ -85,11 +89,12 @@ function App() {
     setResults(null);
 
     try {
-      const resp = await axios.post('http://localhost:8000/scan/scan/advanced', { target });
+      // NOTE: endpoint -> `${API_BASE}/advanced`
+      const resp = await axios.post(`${API_BASE}/advanced`, { target });
       setScanId(resp.data.scan_id);
       setStatus(resp.data.status);
     } catch (error) {
-      toast({ title: 'Error', description: error.message, status: 'error', duration: 3000, isClosable: true });
+      toast({ title: 'Error', description: error?.response?.data || error.message, status: 'error', duration: 3000, isClosable: true });
       setLoading(false);
     }
   };
@@ -102,9 +107,11 @@ function App() {
     }
     const interval = setInterval(async () => {
       try {
-        const resp = await axios.get(`http://localhost:8000/scan/scan/${scanId}/status`);
+        // NOTE: status endpoint -> `${API_BASE}/${scanId}/status`
+        const resp = await axios.get(`${API_BASE}/${scanId}/status`);
         setStatus(resp.data.status);
-      } catch {
+      } catch (err) {
+        console.error('Status poll failed', err);
         clearInterval(interval);
         setLoading(false);
       }
@@ -114,10 +121,12 @@ function App() {
 
   const fetchResults = async () => {
     try {
-      const resp = await axios.get(`http://localhost:8000/scan/scan/${scanId}/results`);
+      // NOTE: results endpoint -> `${API_BASE}/${scanId}/results`
+      const resp = await axios.get(`${API_BASE}/${scanId}/results`);
       setResults(resp.data.findings);
       setLoading(false);
-    } catch {
+    } catch (err) {
+      console.error('Fetch results failed', err);
       setLoading(false);
     }
   };
@@ -223,7 +232,7 @@ function App() {
                     {f.vulnerability} – <em>{f.parameter || '—'}</em>
                   </Text>
                   <Text mt={2} fontSize="sm" color={colorMode === 'light' ? 'gray.600' : 'gray.300'}>
-                    {f.payloads.join(', ')}
+                    {Array.isArray(f.payloads) ? f.payloads.join(', ') : String(f.payloads)}
                   </Text>
                 </MotionBox>
               ))}
@@ -250,4 +259,3 @@ function App() {
 }
 
 export default App;
-
