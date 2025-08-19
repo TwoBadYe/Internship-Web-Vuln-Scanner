@@ -1,0 +1,22 @@
+{
+  "Apache": {
+    "2.4.49": [
+      {
+        "cve": "CVE-2021-41773",
+        "severity": "HIGH",
+        "description": "Path traversal and file disclosure in Apache HTTP Server 2.4.49",
+        "notes": "Test entry"
+      }
+    ]
+  },
+  "WordPress": {
+    "5.8": [
+      {
+        "cve": "CVE-2021-XXXXX",
+        "severity": "HIGH",
+        "description": "Example WordPress vulnerability sample",
+        "notes": "Sample"
+      }
+    ]
+  }
+}

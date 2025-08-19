@@ -8,7 +8,11 @@ from collections import defaultdict
 import re
 from .models import Finding
 import logging
+from dotenv import load_dotenv 
+import os
 
+load_dotenv()
+VULNERS_API_KEY = os.getenv("VULNERS_API_KEY")
 logger = logging.getLogger(__name__)
 
 def discover_scans() -> Dict[str, object]:
@@ -100,15 +104,80 @@ async def run_basic_scan(scan_id: str, target: str, options: List[str], store: d
     store[scan_id]['results'] = [g.dict() for g in grouped]
 
 async def run_advanced_scan(scan_id: str, target: str, store: dict) -> None:
+    """
+    Advanced scan orchestration:
+      - fingerprint target using app.scans_advanced.fingerprint
+      - lookup CVEs using app.scans_advanced.cve_lookup
+      - store grouped Finding objects via existing group_findings helper
+    """
+    store[scan_id]['status'] = 'in_progress'
+    store[scan_id]['target'] = target
+    raw_findings = []
+
+    timeout = httpx.Timeout(20.0, read=20.0)
     try:
-        await asyncio.sleep(2)
+        async with httpx.AsyncClient(timeout=timeout, verify=False) as client:
+            # lazy import modules
+            try:
+                fp_mod = importlib.import_module("app.scans_advanced.fingerprint")
+            except Exception as e:
+                logger.exception("Failed to import fingerprint module: %s", e)
+                fp_mod = None
+                raw_findings.append(f"Advanced scan error: fingerprint module import failed: {e}")
+
+            try:
+                cve_mod = importlib.import_module("app.scans_advanced.cve_lookup")
+            except Exception as e:
+                logger.exception("Failed to import cve_lookup module: %s", e)
+                cve_mod = None
+                raw_findings.append(f"Advanced scan error: cve_lookup module import failed: {e}")
+
+            # run fingerprint
+            detections = []
+            if fp_mod:
+                try:
+                    detections = await fp_mod.detect(target, client)
+                    for d in detections:
+                        if d.get("product") == "fetch_error":
+                            raw_findings.append(f"Fingerprinting error: {d.get('evidence')}")
+                        else:
+                            prod = d.get("product")
+                            ver = d.get("version") or "unknown"
+                            ev = d.get("evidence", "")
+                            raw_findings.append(f"Technology Detected: {prod}/{ver} — {ev}")
+                except Exception as e:
+                    logger.exception("Fingerprinting failed: %s", e)
+                    raw_findings.append(f"Fingerprinting failed: {e}")
+
+            # run cve lookup
+            if cve_mod and detections:
+                try:
+                    cve_lines = cve_mod.lookup(detections)
+                    if cve_lines:
+                        raw_findings.extend(cve_lines)
+                    else:
+                        raw_findings.append("CVE lookup found no high-severity issues")
+                except Exception as e:
+                    logger.exception("CVE lookup failed: %s", e)
+                    raw_findings.append(f"CVE lookup failed: {e}")
+
+    except Exception as outer:
+        logger.exception("Advanced scan top-level failure: %s", outer)
+        raw_findings.append(f"Advanced scan failed: {outer}")
+
+    # convert to Finding objects using scan_core.group_findings (make sure group_findings exists in this module)
+    try:
+        grouped = group_findings(raw_findings)
+    except Exception as e:
+        logger.exception("group_findings failed: %s", e)
+        # fallback: store raw strings
         store[scan_id]['status'] = 'done'
-        store[scan_id]['target'] = target
-        store[scan_id]['results'] = [{"vulnerability": "Advanced scan", "parameter": None, "payloads": ["Not implemented"]}]
-    except Exception as exc:
-        store[scan_id]['status'] = 'done'
-        store[scan_id]['target'] = target
-        store[scan_id]['results'] = [f"Advanced scan failed: {exc}"]
+        store[scan_id]['results'] = raw_findings
+        return
+
+    store[scan_id]['status'] = 'done'
+    store[scan_id]['target'] = target
+    store[scan_id]['results'] = grouped
 
 def available_scans():
     return list(discover_scans().keys())
