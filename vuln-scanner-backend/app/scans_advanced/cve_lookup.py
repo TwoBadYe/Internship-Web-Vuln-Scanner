@@ -11,18 +11,11 @@ logger = logging.getLogger(__name__)
 
 # optional backends
 _HAS_VULNERS = False
-_HAS_NVDLIB = False
 try:
     import vulners
     _HAS_VULNERS = True
 except Exception:
     _HAS_VULNERS = False
-
-try:
-    import nvdlib
-    _HAS_NVDLIB = True
-except Exception:
-    _HAS_NVDLIB = False
 
 # static DB path (project app/data/cve_db.json)
 DEFAULT_DB = Path(__file__).resolve().parents[1] / "data" / "cve_db.json"
@@ -59,30 +52,6 @@ def _vulners_lookup(product: str, version: Optional[str]) -> List[Dict[str, Any]
         logger.exception("Vulners lookup failed for %s %s: %s", product, version, e)
     return findings
 
-def _nvdlib_lookup(product: str, version: Optional[str]) -> List[Dict[str, Any]]:
-    results = []
-    if not _HAS_NVDLIB:
-        return results
-    try:
-        q = product if not version else f"{product} {version}"
-        cves = nvdlib.searchCVE(keyword=q)
-        for c in cves:
-            cve_id = getattr(c, 'id', None) or (getattr(c, 'cve', {}).get('CVE_data_meta', {}).get('ID') if hasattr(c, 'cve') else None)
-            severity = None
-            if hasattr(c, 'cvss'):
-                try:
-                    severity = getattr(c, 'cvss').get('baseScore')
-                except Exception:
-                    severity = None
-            desc = ""
-            try:
-                desc = getattr(c, 'cve', {}).get('description', {}).get('description_data', [{}])[0].get('value', '')
-            except Exception:
-                desc = str(c)
-            results.append({"cve": cve_id, "severity": severity or "UNKNOWN", "description": desc})
-    except Exception as e:
-        logger.exception("nvdlib lookup failed for %s %s: %s", product, version, e)
-    return results
 
 def _match_static_db(detections: List[Dict[str, Any]], db_path: Optional[str] = None) -> List[Dict[str, Any]]:
     db = _load_static_db(db_path)
@@ -153,28 +122,6 @@ def lookup(detections: List[Dict[str, Any]], db_path: Optional[str] = None) -> L
                         output_lines.append(f"High CVE on {prod}/{ver or 'unknown'}: {v.get('cve')} - {v.get('description')} (evidence: {evidence})")
             except Exception as e:
                 logger.exception("Vulners backend failure: %s", e)
-        if output_lines:
-            return output_lines
-
-    # nvdlib
-    if _HAS_NVDLIB:
-        for d in detections:
-            prod = d.get("product")
-            ver = d.get("version")
-            evidence = d.get("evidence", "")
-            try:
-                nv = _nvdlib_lookup(prod, ver)
-                for v in nv:
-                    sev = v.get("severity") or "UNKNOWN"
-                    try:
-                        numeric = float(sev)
-                        high = numeric >= 7.0
-                    except Exception:
-                        high = str(sev).upper() in ("HIGH", "CRITICAL")
-                    if high:
-                        output_lines.append(f"High CVE on {prod}/{ver or 'unknown'}: {v.get('cve')} - {v.get('description')} (evidence: {evidence})")
-            except Exception as e:
-                logger.exception("nvdlib backend failure: %s", e)
         if output_lines:
             return output_lines
 
