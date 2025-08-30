@@ -204,4 +204,4 @@ This project is licensed under the **MIT License** — see [LICENSE](LICENSE).
 ## 👤 Author / Contact
 
 Jawher Khiari — Internship Project (2025)  
-[text](https://www.linkedin.com/in/jawher-khiari-88a32b2ba/)
+https://www.linkedin.com/in/jawher-khiari-88a32b2ba/
