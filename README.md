@@ -1,6 +1,5 @@
 # 🛡️ Web Vulnerability Scanner
 
-[![GitHub stars](https://img.shields.io/github/stars/yourusername/your-repo.svg?style=social)](https://github.com/yourusername/your-repo)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)]()
 [![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20ChakraUI-61dafb.svg)]()
