@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def discover_scans() -> Dict[str, object]:
     scanners = {}
     try:
-        import app.scans as scans_pkg  # requires app/scans/__init__.py
+        import app.scans as scans_pkg  
     except Exception as e:
         logger.exception("Failed to import app.scans package: %s", e)
         return scanners
@@ -119,7 +119,6 @@ def group_findings(raw: List[str]) -> List[Finding]:
         for info in groups.values()
     ]
 
-# high level wrapper to be used from router (pass store)
 async def run_basic_scan(scan_id: str, target: str, options: List[str], store: dict):
     selected = options or []
     raw = await run_selected_scans(target, selected)

@@ -14,8 +14,8 @@ class ScanStatus(BaseModel):
     status: str
 
 class Finding(BaseModel):
-    vulnerability: str           # e.g. "SQL Injection", "XSS", "Open Ports", ...
-    parameter: Optional[str]     # e.g. "id", "search", or None
+    vulnerability: str           
+    parameter: Optional[str]    
     payloads: List[str] = Field(default_factory=list)
 
 class ScanResult(BaseModel):
