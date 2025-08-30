@@ -120,10 +120,10 @@ Store (in-memory dict for scan status/results) ← replaceable by DB
 ## 📸 Screenshots
 
 ### Dashboard View
-![Dashboard Screenshot](./docs/ProjectUI.JPG.png)
+![Dashboard Screenshot](./docs/ProjectUI.JPG)
 
 ### Basic Vulnerability Report
-![Vulnerability Report Screenshot](./docs/ProjectTest1.png)
+![Vulnerability Report Screenshot](./docs/ProjectTest1.JPG)
 
 ### Service Scan
 ![Service Scan Screenshot](./docs/ProjectTest2.JPG)
